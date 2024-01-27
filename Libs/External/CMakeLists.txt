@@ -1,0 +1,3 @@
+add_subdirectory(FreeRTOS)
+add_subdirectory(CMSIS_RTOS_V2)
+add_subdirectory(etl)

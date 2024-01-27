@@ -1,0 +1,7 @@
+add_subdirectory(External)
+add_subdirectory(Buffer)
+add_subdirectory(Drivers)
+add_subdirectory(Drivers_Interface)
+add_subdirectory(Modules)
+add_subdirectory(Parser)
+add_subdirectory(System)
