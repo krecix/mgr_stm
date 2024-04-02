@@ -24,7 +24,8 @@ namespace Drivers {
 
         //Buffer mode
         inline void DMA1_Stream1_Interrupt() {
-            m_callback(ReceiveADCValueType_t::Buffer, maxLen - getActual_NDTR_ADC());
+            //m_callback(ReceiveADCValueType_t::Buffer, maxLen - getActual_NDTR_ADC());
+            m_callback(ReceiveADCValueType_t::Buffer, 12000);
         }
 
     private:
