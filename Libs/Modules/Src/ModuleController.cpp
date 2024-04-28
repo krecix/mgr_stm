@@ -13,7 +13,7 @@ ModuleController::ModuleController(VibrationController &vibrationController,
       checkPIDTask{"CheckPID_Task", 4096, System::RTOSPriority::High} {}
 
 ModuleControllerStatus_t ModuleController::checkPattern(
-    etl::delegate<void(uint16_t, uint16_t *, size_t)> callback) {
+    etl::delegate<void(uint16_t, uint16_t *, uint16_t *, size_t)> callback) {
 
   if (m_pattern.locked()) {
     return ModuleControllerStatus_t::InUse;
@@ -44,8 +44,8 @@ ModuleControllerStatus_t ModuleController::checkPattern(
 }
 
 void ModuleController::checkPatternProcedure(void *args) {
-  etl::delegate<void(uint16_t, uint16_t *, size_t)> callback =
-      *reinterpret_cast<etl::delegate<void(uint16_t, uint16_t *, size_t)> *>(
+  etl::delegate<void(uint16_t, uint16_t *, uint16_t *, size_t)> callback =
+      *reinterpret_cast<etl::delegate<void(uint16_t, uint16_t *, uint16_t *, size_t)> *>(
           args);
   bool started = false;
   bool finished = false;
@@ -92,7 +92,7 @@ void ModuleController::checkPatternProcedure(void *args) {
       started = false;
       m_vibrationControllerUnit.goToInitialPosition();
       m_pattern.unlock();
-      callback(setpoint, adcBuffer, receivedValueCount);
+      callback(setpoint, adcBuffer, pidResponseBuffer, receivedValueCount);
       checkPatternTask.suspendTask();
     }
 
@@ -110,7 +110,7 @@ void ModuleController::checkPatternProcedure(void *args) {
 
 ModuleControllerStatus_t ModuleController::checkPID(
     float P, float I, float D,
-    etl::delegate<void(uint16_t, uint16_t *, size_t)> callback) {
+    etl::delegate<void(uint16_t, uint16_t *, uint16_t *, size_t)> callback) {
   if (m_pattern.locked()) {
     return ModuleControllerStatus_t::InUse;
   } else if (m_pattern.empty()) {
@@ -147,8 +147,8 @@ ModuleControllerStatus_t ModuleController::checkPID(
 
 static int32_t pidResponse = 0;
 void ModuleController::checkPIDProcedure(void *args) {
-  etl::delegate<void(uint16_t, uint16_t *, size_t)> callback =
-      *reinterpret_cast<etl::delegate<void(uint16_t, uint16_t *, size_t)> *>(
+  etl::delegate<void(uint16_t, uint16_t *, uint16_t *, size_t)> callback =
+      *reinterpret_cast<etl::delegate<void(uint16_t, uint16_t *, uint16_t *, size_t)> *>(
           args);
   bool started = false;
   bool finished = false;
@@ -185,6 +185,7 @@ void ModuleController::checkPIDProcedure(void *args) {
           adcBuffer, COMMUNICATOR_BUFFER_MAX_SIZE, &actualValue, config,
           [&](ReceiveADCValueType_t type, size_t length) {
             if (type == ReceiveADCValueType_t::Actual) {
+              test_adcBuffer[pidResponseNumber] = actualValue;
               pidResponse = pidController.calculate(PID_setpoint, actualValue);
               if (pidResponse < 0) {
                 if (pidResponse < -1000) {
@@ -199,9 +200,12 @@ void ModuleController::checkPIDProcedure(void *args) {
                 m_vibrationControllerUnit.ElectricCoilsUnit.left(pidResponse);
                 m_vibrationControllerUnit.ElectricCoilsUnit.right(0);
               }
+              pidResponseBuffer[pidResponseNumber] = pidResponse;
+              pidResponseNumber++;
             } else {
               receivedValueCount = length;
               finished = true;
+              pidResponseNumber = 0;
             }
           });
     }
@@ -212,7 +216,7 @@ void ModuleController::checkPIDProcedure(void *args) {
       m_vibrationControllerUnit.ElectricCoilsUnit.stop();
       m_vibrationControllerUnit.goToInitialPosition();
       m_pattern.unlock();
-      callback(PID_setpoint, adcBuffer, receivedValueCount);
+      callback(PID_setpoint, test_adcBuffer, pidResponseBuffer, receivedValueCount);
       checkPIDTask.suspendTask();
     }
 
@@ -222,7 +226,10 @@ void ModuleController::checkPIDProcedure(void *args) {
         executePatternElement(element);
         patternIterator++;
       } else {
-        m_vibrationControllerUnit.AdcUnit.stop();
+        if (pidResponseNumber == 12000) {
+          m_vibrationControllerUnit.AdcUnit.stop();
+          pidResponseNumber = 0;
+        }
       }
     }
   }

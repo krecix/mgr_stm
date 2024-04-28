@@ -167,8 +167,6 @@ void pidOperate() {
     setpoint = static_cast<int32_t>(sum / 1000.0);
 
     while (true) {
-
-
         osDelay(System::TicksFromMs(1));
     }
 }

@@ -58,7 +58,6 @@ public:
 
         d_term = static_cast<PIDType>(pidParameters.Kd * (error - previousError)); // Response D member
 
-
         if (i_term >= pidParameters.antiWindupLimit) {
             i_term = pidParameters.antiWindupLimit;
         } else if (i_term <= -pidParameters.antiWindupLimit) {
@@ -67,7 +66,7 @@ public:
 
         previousError = error; //Update previous value variable
 
-        return static_cast<InputDataType>(p_term + i_term + d_term);
+        return static_cast<InputDataType>(p_term + i_term + d_term);;
     }
 
 private:

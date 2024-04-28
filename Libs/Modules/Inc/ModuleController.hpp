@@ -22,14 +22,14 @@ class ModuleController {
 public:
     ModuleController(VibrationController &vibrationController, Pattern &pattern);
 
-    ModuleControllerStatus_t checkPattern(etl::delegate<void(uint16_t setpoint, uint16_t *measurement, size_t length)> callback);
+    ModuleControllerStatus_t checkPattern(etl::delegate<void(uint16_t setpoint, uint16_t *measurement, uint16_t *pidResponses, size_t length)> callback);
 
     Pattern& getPattern() {
         return m_pattern;
     }
 
     ModuleControllerStatus_t checkPID(float P, float I, float D,
-                                      etl::delegate<void(uint16_t setpoint, uint16_t *measurement, size_t length)> callback);
+                                      etl::delegate<void(uint16_t setpoint, uint16_t *measurement, uint16_t *pidResponses, size_t length)> callback);
 
 private:
     [[noreturn]] void checkPatternProcedure(void *args);
@@ -46,6 +46,9 @@ private:
     Position convertPosition(uint8_t position);
     void goToPosition(Position position);
 
+    uint16_t pidResponseNumber = 0; 
+    int16_t pidResponseBuffer[COMMUNICATOR_BUFFER_MAX_SIZE];
+    uint16_t test_adcBuffer[COMMUNICATOR_BUFFER_MAX_SIZE];
     uint16_t adcBuffer[COMMUNICATOR_BUFFER_MAX_SIZE];
     PIDController<float, int32_t>::PIDParameters pidParameters {
         .Kp = 0.0,

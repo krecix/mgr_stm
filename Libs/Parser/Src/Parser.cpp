@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <float.h>
 
 #include "BinaryCommunicator.hpp"
 
@@ -147,7 +148,7 @@ ParseStatus_t Parser::CheckPatternCMD() {
         return ParseStatus_t::InvalidCommand;
     }
 
-    auto status = m_moduleController->checkPattern([&](uint16_t setpoint, uint16_t *measurement, size_t length) {
+    auto status = m_moduleController->checkPattern([&](uint16_t setpoint, uint16_t *measurement, uint16_t *pidResponses, size_t length) {
 
         if (length > (m_buffer->capacity() - BUFFER_SPACE_RESERVE)) {
             m_buffer->setCount(2);
@@ -210,7 +211,7 @@ ParseStatus_t Parser::CheckPID_CMD() {
     I = bytesToFloat(bufferContentPtr[5], bufferContentPtr[6], bufferContentPtr[7], bufferContentPtr[8]);
     D = bytesToFloat(bufferContentPtr[9], bufferContentPtr[10], bufferContentPtr[11], bufferContentPtr[12]);
 
-    auto status = m_moduleController->checkPID(P, I, D, [&](uint16_t setpoint, uint16_t *measurement, size_t length) {
+    auto status = m_moduleController->checkPID(P, I, D, [&](uint16_t setpoint, uint16_t *measurement, uint16_t *pidResponses, size_t length) {
         if (length > (m_buffer->capacity() - BUFFER_SPACE_RESERVE)) {
             m_buffer->setCount(2);
             m_buffer->get()[0] = static_cast<uint8_t>(Commands_t::CheckPID);
@@ -228,6 +229,13 @@ ParseStatus_t Parser::CheckPID_CMD() {
         for (size_t i = 0; i < length; i++) {
             m_buffer->get()[4 + (i * 2)] = measurement[i] & 0xFF;
             m_buffer->get()[4 + ((i * 2) + 1)] = (measurement[i] >> 8UL) & 0xFF;
+        }
+        for (size_t i = 0; i < length; i++) {
+            int test = (int) pidResponses[i];
+            uint32_t test2 = pidResponses[i] & 0xFF;
+            uint32_t test3 = (pidResponses[i] >> 8UL) & 0xFF;
+            m_buffer->get()[4+length + (i * 2)] = pidResponses[i] & 0xFF;
+            m_buffer->get()[4+length + ((i * 2) + 1)] = (pidResponses[i] >> 8UL) & 0xFF;
         }
         BinaryCommunicator::Instance().sendCurrentBuffer();
 
